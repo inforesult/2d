@@ -47,7 +47,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
     wib = get_wib()
     try:
         log_status("🌐", f"Login ke situs {situs} dengan userid {userid}...")
-        browser = playwright.chromium.launch(headless=False)
+        browser = playwright.chromium.launch(headless=True)
         context = browser.new_context(
             viewport={"width": 1280, "height": 720},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/113.0 Safari/537.36"
