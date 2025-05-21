@@ -39,5 +39,5 @@ jobs:
       env:
         pw: ${{ secrets.PW }}
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID2 }}
       run: python cekwd.py
