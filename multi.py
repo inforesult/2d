@@ -5,6 +5,7 @@ from datetime import datetime
 import pytz
 import requests
 import os
+import re
 
 pw = os.getenv("pw")
 telegram_token = os.getenv("TELEGRAM_TOKEN")
@@ -19,19 +20,6 @@ def log_status(emoji: str, message: str):
 def baca_file(file_name: str) -> str:
     with open(file_name, 'r') as file:
         return file.read().strip()
-
-def baca_multi_config(files_csv: str) -> str:
-    semua_kombinasi = []
-    for nama_file in files_csv.split(','):
-        nama_file = nama_file.strip()
-        if not nama_file.endswith(".txt"):
-            nama_file += ".txt"
-        try:
-            konten = baca_file(nama_file)
-            semua_kombinasi.append(konten)
-        except FileNotFoundError:
-            print(f"⚠️ File tidak ditemukan: {nama_file}")
-    return '*'.join(semua_kombinasi)
 
 def kirim_telegram_log(status: str, pesan: str):
     print(pesan)
@@ -55,18 +43,11 @@ def parse_saldo(saldo_text: str) -> float:
     saldo_text = saldo_text.replace("Rp.", "").replace("Rp", "").strip().replace(",", "")
     return float(saldo_text)
 
-def run(playwright: Playwright, situs: str, userid: str, bet_raw: str, bet_raw2: str, config_csv: str):
+def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
     wib = get_wib()
     try:
-        nomor_kombinasi = baca_multi_config(config_csv)
-        bet_kali = float(bet_raw)
-        bet_kali2 = float(bet_raw2)
-        jumlah_kombinasi = len(nomor_kombinasi.split('*'))
-        bet_per_nomor = (bet_kali + bet_kali2) * 1000
-        total_bet_rupiah = jumlah_kombinasi * bet_per_nomor
-
         log_status("🌐", f"Login ke situs {situs} dengan userid {userid}...")
-        browser = playwright.chromium.launch(headless=True)
+        browser = playwright.chromium.launch(headless=False)
         context = browser.new_context(
             viewport={"width": 1280, "height": 720},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/113.0 Safari/537.36"
@@ -114,23 +95,41 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str, bet_raw2:
             saldo_text = "tidak diketahui"
             saldo_value = 0.0
 
+        # Buka history
+        page1.get_by_role("link", name="NOMOR HISTORY NOMOR").dblclick()
+        page1.wait_for_selector("table#historyTable")
+        
+        # Ambil nomor terbaru dari history
+        nomor_terbaru = page1.locator("table#historyTable tbody tr td").nth(3).inner_text()
+        dua_digit_akhir = nomor_terbaru[-2:]
+        
+        
+        print(f"Nomor terakhir: {nomor_terbaru}, Dua digit akhir: {dua_digit_akhir}")
+        
+        # Buat acuan angka dari 1234567890 tanpa dua digit akhir
+        all_digits = "1234567890"
+        digit_isi = "".join([d for d in all_digits if d not in dua_digit_akhir])
+        print(f"Angka untuk diisi: {digit_isi}")
+        time.sleep(3)
+        
         log_status("🎯", "Masuk ke menu betting 5dFast...")
-        page1.locator("a[data-urlkey='5dFast']").click()
-        for _ in range(5):
-            tombol = page1.get_by_text("FULL", exact=True)
-            tombol.hover()
-            time.sleep(random.uniform(0.8, 1.6))
-            tombol.click()
+        page1.get_by_role("link", name="5D BB Campuran").click()
+        time.sleep(3)
+        page1.get_by_role("listitem").filter(has_text=re.compile(r"^FULL$")).click()
+        page1.get_by_role("listitem").filter(has_text=re.compile(r"^FULL$")).click()
+        page1.get_by_role("listitem").filter(has_text=re.compile(r"^FULL$")).click()
+        page1.get_by_role("listitem").filter(has_text=re.compile(r"^FULL$")).click()
+        page1.get_by_role("listitem").filter(has_text=re.compile(r"^FULL$")).click()
 
         log_status("✍️", "Mengisi form betting...")
-        page1.locator("#numinput").fill(nomor_kombinasi)
-        input3d = page1.locator("input#buy3d")
+        page1.get_by_role("textbox", name="digit - 8 digit").click()
+        page1.get_by_role("textbox", name="digit - 8 digit").fill(digit_isi)
+        input3d = page1.locator("input#buy2d")
         input3d.fill("")
         input3d.type(str(bet_raw), delay=80)
-        input4d = page1.locator("input#buy4d")
-        input4d.fill("")
-        input4d.type(str(bet_raw2), delay=80)
-        page1.locator("button.jq-bet-submit").click()
+        page1.get_by_role("button", name="Calculate").click()
+        time.sleep(3)
+        page1.get_by_role("button", name="Submit").click()
 
         log_status("⏳", "Menunggu konfirmasi betting...")
         try:
@@ -175,10 +174,10 @@ def main():
             if '|' not in baris or baris.strip().startswith("#"):
                 continue
             parts = baris.strip().split('|')
-            if len(parts) < 5:
+            if len(parts) < 3:
                 continue
-            situs, userid, bet_raw, bet_raw2, config_csv = parts
-            run(playwright, situs.strip(), userid.strip(), bet_raw.strip(), bet_raw2.strip(), config_csv.strip())
+            situs, userid, bet_raw = (parts + [""] * 3)[:3]
+            run(playwright, situs.strip(), userid.strip(), bet_raw.strip())
 
 if __name__ == "__main__":
     main()
