@@ -148,6 +148,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
             pesan_sukses = (
                 f"<b>[SUKSES]</b>\n"
                 f"👤 {userid}\n"
+                f"🎯 {dua_digit_akhir}\n"
                 f"💰 SALDO KAMU Rp. <b>{saldo_value:,.0f}</b>\n"
                 f"⌚ {wib}"
             )
@@ -156,6 +157,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
             pesan_gagal = (
                 f"<b>[GAGAL]</b>\n"
                 f"👤 {userid}\n"
+                f"🎯 {dua_digit_akhir}\n"
                 f"💰 SALDO KAMU Rp. <b>{saldo_value:,.0f}</b>\n"
                 f"⌚ {wib}"
             )
