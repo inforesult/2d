@@ -124,7 +124,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
         log_status("✍️", "Mengisi form betting...")
         page1.get_by_role("textbox", name="digit - 8 digit").click()
         page1.get_by_role("textbox", name="digit - 8 digit").fill(digit_isi)
-        input3d = page1.locator("input#buy2d")
+        input3d = page1.locator("input#buy3d")
         input3d.fill("")
         input3d.type(str(bet_raw), delay=80)
         page1.get_by_role("button", name="Calculate").click()
