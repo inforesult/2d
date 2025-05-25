@@ -153,7 +153,9 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         log_status("💰", f"{userid}@{situs} — mengambil saldo akhir…")
         try:
             page.goto(f"https://{situs}/lobby", timeout=60000)
-            time.sleep(3)
+            time.sleep(1)
+            page.get_by_text("Refresh").click()
+            time.sleep(2)
             saldo_text = page.locator("#bal-text").inner_text(timeout=7000)
             saldo_akhir = parse_rupiah(saldo_text)
             log_status("💸", f"{userid}@{situs} — saldo akhir: Rp {saldo_akhir:,.0f}")
