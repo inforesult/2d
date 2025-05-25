@@ -138,8 +138,9 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
 
         log_status("📤", f"{userid}@{situs} — mengirim taruhan…")
         page.get_by_role("button", name="Submit").click()
+        page.once("dialog", lambda dialog: dialog.accept())
         page.get_by_role("button", name="Kirim").click()
-        page.once("dialog", lambda d: d.accept())
+       
 
         try:
             page.wait_for_selector("text=/Bet Sukses/i", timeout=15000)
