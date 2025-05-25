@@ -42,19 +42,19 @@ def ambil_nomor_23_periode_lalu(page):
     hasil = []
 
     try:
-        # Klik "HOKIDRAW"
+        log_status("🔍", "Klik tombol HOKIDRAW…")
         page.get_by_role("button", name="HOKIDRAW").click(timeout=5000)
         time.sleep(3)
-        
-        # Baca periode sekarang
+
+        log_status("📅", "Ambil periode sekarang…")
         periode_sekarang_elem = page.locator("//table//tr[1]/td[3]")
         periode_sekarang = int(periode_sekarang_elem.inner_text(timeout=7000).strip())
 
-        # Klik tombol angka "3"
+        log_status("🔢", "Klik tombol angka 3…")
         page.get_by_text("3", exact=True).click(timeout=5000)
         time.sleep(3)
 
-        # Ambil semua baris dari tabel
+        log_status("📥", "Ambil semua hasil dari tabel…")
         rows = page.locator("table tbody tr")
         for i in range(rows.count()):
             row = rows.nth(i)
@@ -77,6 +77,7 @@ def ambil_nomor_23_periode_lalu(page):
         print("❌ Error parsing periode:", e)
         return []
 
+
 # ─── BETTING ────────────────────────────────────────────
 def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
     wib_now = get_wib()
@@ -86,7 +87,7 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         context = browser.new_context(**playwright.devices["Pixel 7"])
         page = context.new_page()
 
-        # LOGIN
+        log_status("🔐", f"{userid}@{situs} — login ke situs…")
         page.goto(f"https://{situs}/", timeout=60000)
         try:
             page.locator(".owl-wrapper").click(timeout=3000)
@@ -97,16 +98,18 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         page.get_by_role("button", name="Log in").click()
         page.get_by_role("button", name="Saya Setuju").click(timeout=15000)
 
-        # Ambil saldo awal
+        log_status("💰", f"{userid}@{situs} — mengambil saldo awal…")
         try:
             saldo_text = page.locator("#bal-text").inner_text(timeout=7000)
             saldo_awal = parse_rupiah(saldo_text)
+            log_status("💸", f"{userid}@{situs} — saldo awal: Rp {saldo_awal:,.0f}")
         except:
             saldo_awal = 0.0
+            log_status("⚠️", f"{userid}@{situs} — gagal ambil saldo awal!")
 
-        saldo_akhir = saldo_awal  # Set default agar tidak unbound
+        saldo_akhir = saldo_awal
 
-        # HISTORY
+        log_status("📜", f"{userid}@{situs} — mengambil data 23 periode terakhir…")
         page.goto(f"https://{situs}/history/v2", timeout=30000)
         time.sleep(3)
         nomor_target = ambil_nomor_23_periode_lalu(page)
@@ -117,9 +120,10 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         dua_digit_flat = "".join(set("".join(dua_digit)))
         digit_isi = "".join(d for d in ALL_DIGITS if d not in dua_digit_flat)
 
-        log_status("🔢", f"Periode-23 = {nomor_target[-1] if nomor_target else '-'} → dua digit: {dua_digit} → digit_isi: {digit_isi}")
+        log_status("🔢", f"{userid}@{situs} — dua digit terakhir: {dua_digit}")
+        log_status("✏️", f"{userid}@{situs} — digit isi untuk bet: {digit_isi}")
 
-        # BET
+        log_status("🎮", f"{userid}@{situs} — membuka halaman bet HOKIDRAW…")
         page.goto(f"https://{situs}/lobby", timeout=60000)
         page.locator("#game-togel-all div").filter(has_text="HOKIDRAW").nth(1).click()
         time.sleep(3)
@@ -127,29 +131,33 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         time.sleep(3)
         page.get_by_role("cell", name="BET FULL").click()
         page.get_by_role("cell", name="BET FULL").click()
+
+        log_status("📝", f"{userid}@{situs} — mengisi form taruhan…")
         page.get_by_role("textbox", name=re.compile(r"Digit.*9", re.I)).fill(digit_isi)
         page.locator('input[name="uang2d"]').fill(bet_raw)
-        # Kirim taruhan
+
+        log_status("📤", f"{userid}@{situs} — mengirim taruhan…")
         page.get_by_role("button", name="Submit").click()
-        # hanya satu handler
         page.get_by_role("button", name="Kirim").click()
         page.once("dialog", lambda d: d.accept())
-
 
         try:
             page.wait_for_selector("text=/Bet Sukses/i", timeout=15000)
             sukses = True
+            log_status("✅", f"{userid}@{situs} — bet berhasil dikirim.")
         except TimeoutError:
             sukses = False
+            log_status("❌", f"{userid}@{situs} — bet gagal atau timeout.")
 
-        # Ambil saldo setelah bet (harus kembali ke halaman lobby)
+        log_status("💰", f"{userid}@{situs} — mengambil saldo akhir…")
         try:
             page.goto(f"https://{situs}/lobby", timeout=60000)
             time.sleep(3)
             saldo_text = page.locator("#bal-text").inner_text(timeout=7000)
             saldo_akhir = parse_rupiah(saldo_text)
+            log_status("💸", f"{userid}@{situs} — saldo akhir: Rp {saldo_akhir:,.0f}")
         except Exception as e:
-            print("❌ Gagal ambil saldo akhir:", e)
+            log_status("⚠️", f"{userid}@{situs} — gagal ambil saldo akhir: {e}")
 
         status = "SUKSES" if sukses else "GAGAL"
         emoji = "✅" if sukses else "❌"
@@ -163,12 +171,14 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
 
     except Exception as e:
         tg_send(f"<b>[ERROR]</b>\n{userid}@{situs}\n❌ {e}\n⌚ {wib_now}")
+        log_status("🔥", f"{userid}@{situs} — ERROR: {e}")
     finally:
         try:
             context.close()
             browser.close()
         except:
             pass
+
 
 # ─── MAIN ───────────────────────────────────────────────
 def main():
