@@ -142,7 +142,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
 
         # ─── ambil nomor 23 periode sebelumnya ───
         nomor_target = ambil_nomor_23_periode_lalu(page1)
-        dua_digit_akhir = nomor_target[-2:]
+        dua_digit_akhir = nomor_target[-3:]
 
         print(f"Nomor periode-23: {nomor_target}, dua digit akhir: {dua_digit_akhir}")
 
