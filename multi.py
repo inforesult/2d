@@ -144,7 +144,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
         nomor_target = ambil_nomor_23_periode_lalu(page1)
         digit_hapus = nomor_target[-3:]
 
-        print(f"Nomor periode-23: {nomor_target}, dua digit akhir: {digit_hapus}")
+        print(f"Nomor periode-23: {nomor_target}, digit akhir: {digit_hapus}")
 
         # ─── Buat digit_isi acak dengan 3 angka dihapus ───
         all_digits = list("0123456789")
