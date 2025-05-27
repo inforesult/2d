@@ -142,13 +142,31 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
 
         # ─── ambil nomor 23 periode sebelumnya ───
         nomor_target = ambil_nomor_23_periode_lalu(page1)
-        dua_digit_akhir = nomor_target[-3:]
+        digit_hapus = nomor_target[-3:]
 
-        print(f"Nomor periode-23: {nomor_target}, dua digit akhir: {dua_digit_akhir}")
+        print(f"Nomor periode-23: {nomor_target}, dua digit akhir: {digit_hapus}")
 
-        # buat digit isi (1-10 tanpa dua digit akhir)
-        all_digits  = "1234567890"
-        digit_isi   = "".join(d for d in all_digits if d not in dua_digit_akhir)
+        # ─── Buat digit_isi acak dengan 3 angka dihapus ───
+        all_digits = list("0123456789")
+        random.shuffle(all_digits)
+
+        # Ambil angka unik dari digit_hapus (3 digit akhir dari periode-23)
+        angka_dihapus = list(set(digit_hapus))
+
+        # Tambahkan angka acak dari sisa angka jika kurang dari 3
+        sisa_angka = [d for d in all_digits if d not in angka_dihapus]
+        random.shuffle(sisa_angka)
+
+        while len(angka_dihapus) < 3 and sisa_angka:
+            angka_dihapus.append(sisa_angka.pop())
+
+        # Buat digit_isi: maksimal 7 angka dari all_digits, tanpa angka_dihapus
+        digit_isi = "".join(d for d in all_digits if d not in angka_dihapus)[:7]
+
+        # Debug info
+        print(f"Nomor periode-23: {nomor_target}, tiga digit akhir: {digit_hapus}")
+        print(f"Digit dihapus: {angka_dihapus}")
+        print(f"Angka untuk diisi: {digit_isi}")
         print(f"Angka untuk diisi: {digit_isi}")
         time.sleep(3)
 
@@ -194,7 +212,8 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
             pesan = (
                 f"<b>[SUKSES]</b>\n"
                 f"👤 {userid}\n"
-                f"🎯 {dua_digit_akhir}\n"
+                f"🎯 PERIOD-23: {digit_hapus}\n"
+                f"🚫 DIHAPUS: <b>{', '.join(angka_dihapus)}</b>\n"
                 f"💰 SALDO KAMU Rp. <b>{saldo_value:,.0f}</b>\n"
                 f"⌚ {wib}"
             )
@@ -203,7 +222,8 @@ def run(playwright: Playwright, situs: str, userid: str, bet_raw: str = ""):
             pesan = (
                 f"<b>[GAGAL]</b>\n"
                 f"👤 {userid}\n"
-                f"🎯 {dua_digit_akhir}\n"
+                f"🎯 PERIOD-23: {digit_hapus}\n"
+                f"🚫 DIHAPUS: <b>{', '.join(angka_dihapus)}</b>\n"
                 f"💰 SALDO KAMU Rp. <b>{saldo_value:,.0f}</b>\n"
                 f"⌚ {wib}"
             )
