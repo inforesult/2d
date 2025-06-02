@@ -80,9 +80,12 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str, di
         digit_bet = "".join([d for d in ALL_DIGITS if d not in digit_hapus])
 
         log_status("📝", f"{userid}@{situs} — mengisi form taruhan…")
-        page.locator("input[name=\"r4\"]").fill(digit_bet)
-        page.locator("input[name=\"r3\"]").fill(digit_bet)
-        page.locator("input[name=\"r2\"]").fill(digit_bet)
+        page.locator("input[name=\"r4\"]").click()
+        page.locator("input[name=\"r4\"]").type(digit_bet, delay=50)
+        page.locator("input[name=\"r3\"]").click()
+        page.locator("input[name=\"r3\"]").type(digit_bet, delay=50)
+        page.locator("input[name=\"r2\"]").click()        
+        page.locator("input[name=\"r2\"]").type(digit_bet, delay=50)
         page.locator("#beli-3dset").fill(bet_raw)
 
         log_status("📤", f"{userid}@{situs} — mengirim taruhan…")
