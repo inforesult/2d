@@ -6,7 +6,6 @@ PW = os.getenv("pw")
 TG_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TG_CHAT = os.getenv("TELEGRAM_CHAT_ID")
 ALL_DIGITS = "1234567890"
-MAX_PAGES_SEARCH = 5
 
 # ─── UTIL ──────────────────────────────────────────────
 def get_wib() -> str:
@@ -37,49 +36,8 @@ def parse_rupiah(text: str) -> float:
     return float(re.sub(r"[^\d]", "", text))
 
 
-# ─── AMBIL 23 NOMOR TERAKHIR ───────────────────────────
-def ambil_nomor_23_periode_lalu(page):
-    hasil = []
-
-    try:
-        log_status("🔍", "Klik tombol HOKIDRAW…")
-        page.get_by_role("button", name="HOKIDRAW").click(timeout=5000)
-        time.sleep(3)
-
-        log_status("📅", "Ambil periode sekarang…")
-        periode_sekarang_elem = page.locator("//table//tr[1]/td[3]")
-        periode_sekarang = int(periode_sekarang_elem.inner_text(timeout=7000).strip())
-
-        log_status("🔢", "Klik tombol angka 3…")
-        page.get_by_text("3", exact=True).click(timeout=5000)
-        time.sleep(3)
-
-        log_status("📥", "Ambil semua hasil dari tabel…")
-        rows = page.locator("table tbody tr")
-        for i in range(rows.count()):
-            row = rows.nth(i)
-            tgl = row.locator("td").nth(0).inner_text().strip()
-            periode = int(row.locator("td").nth(2).inner_text().strip())
-            result = row.locator("td").nth(3).locator("a").inner_text().strip()
-
-            hasil.append({
-                "tanggal": tgl,
-                "periode": periode,
-                "result": result
-            })
-
-        target_periode = periode_sekarang - 23
-        hasil_terakhir = [h for h in hasil if h["periode"] == target_periode]
-
-        return hasil_terakhir
-
-    except Exception as e:
-        print("❌ Error parsing periode:", e)
-        return []
-
-
 # ─── BETTING ────────────────────────────────────────────
-def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
+def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str, digit_hapus: str):
     wib_now = get_wib()
     try:
         log_status("🌐", f"{userid}@{situs} — membuka browser…")
@@ -88,7 +46,7 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         page = context.new_page()
 
         log_status("🔐", f"{userid}@{situs} — login ke situs…")
-        page.goto(f"https://{situs}/", timeout=60000)
+        page.goto(f"https://{situs}/lobby", timeout=60000)
         try:
             page.locator(".owl-wrapper").click(timeout=3000)
         except:
@@ -109,38 +67,28 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
 
         saldo_akhir = saldo_awal
 
-        log_status("📜", f"{userid}@{situs} — mengambil data 23 periode terakhir…")
-        page.goto(f"https://{situs}/history/v2", timeout=30000)
-        time.sleep(3)
-        nomor_target = ambil_nomor_23_periode_lalu(page)
-        if not nomor_target:
-            raise Exception("Gagal ambil 23 periode terakhir!")
-
-        dua_digit = [n["result"][-2:] for n in nomor_target]
-        dua_digit_flat = "".join(set("".join(dua_digit)))
-        digit_isi = "".join(d for d in ALL_DIGITS if d not in dua_digit_flat)
-
-        log_status("🔢", f"{userid}@{situs} — dua digit terakhir: {dua_digit}")
-        log_status("✏️", f"{userid}@{situs} — digit isi untuk bet: {digit_isi}")
-
         log_status("🎮", f"{userid}@{situs} — membuka halaman bet HOKIDRAW…")
         page.goto(f"https://{situs}/lobby", timeout=60000)
         page.locator("#game-togel-all div").filter(has_text="HOKIDRAW").nth(1).click()
         time.sleep(3)
-        page.get_by_role("button", name="BB Campuran").click()
+        page.get_by_role("button", name="Angka Tarung").click()
         time.sleep(3)
         page.get_by_role("cell", name="BET FULL").click()
         page.get_by_role("cell", name="BET FULL").click()
 
+        # Hitung digit taruhan (hapus dari ALL_DIGITS)
+        digit_bet = "".join([d for d in ALL_DIGITS if d not in digit_hapus])
+
         log_status("📝", f"{userid}@{situs} — mengisi form taruhan…")
-        page.get_by_role("textbox", name=re.compile(r"Digit.*9", re.I)).fill(digit_isi)
-        page.locator('input[name="uang2d"]').fill(bet_raw)
+        page.locator("input[name=\"r4\"]").fill(digit_bet)
+        page.locator("input[name=\"r3\"]").fill(digit_bet)
+        page.locator("input[name=\"r2\"]").fill(digit_bet)
+        page.locator("#beli-3dset").fill(bet_raw)
 
         log_status("📤", f"{userid}@{situs} — mengirim taruhan…")
         page.get_by_role("button", name="Submit").click()
         page.once("dialog", lambda dialog: dialog.accept())
         page.get_by_role("button", name="Kirim").click()
-       
 
         try:
             page.wait_for_selector("text=/Bet Sukses/i", timeout=15000)
@@ -167,7 +115,7 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str):
         tg_send(
             f"<b>[{status}]</b> {emoji}\n"
             f"👤 {userid}\n"
-            f"🎯 {dua_digit[-1] if dua_digit else '-'}\n"
+            f"🎯 {digit_bet}\n"
             f"💰 SALDO Rp <b>{saldo_akhir:,.0f}</b>\n"
             f"⌚ {wib_now}"
         )
@@ -191,8 +139,8 @@ def main():
         for line in rows:
             if line.strip().startswith("#") or "|" not in line:
                 continue
-            situs, userid, bet = (line.split("|") + [""])[:3]
-            run_single(p, situs.strip(), userid.strip(), bet.strip())
+            situs, userid, bet, digit_hapus = (line.split("|") + [""])[:4]
+            run_single(p, situs.strip(), userid.strip(), bet.strip(), digit_hapus.strip())
 
 if __name__ == "__main__":
     if not PW:
