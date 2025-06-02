@@ -69,6 +69,7 @@ def run_single(playwright: Playwright, situs: str, userid: str, bet_raw: str, di
 
         log_status("🎮", f"{userid}@{situs} — membuka halaman bet HOKIDRAW…")
         page.goto(f"https://{situs}/lobby", timeout=60000)
+        time.sleep(3)
         page.locator("#game-togel-all div").filter(has_text="HOKIDRAW").nth(1).click()
         time.sleep(3)
         page.get_by_role("button", name="Angka Tarung").click()
