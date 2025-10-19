@@ -101,25 +101,31 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
 
         if len(nomor_terbaru) < 5:
             raise ValueError(f"Nomor tidak valid: {nomor_terbaru}")
-        angka_ke5 = nomor_terbaru[-1]
-        log_status("🔢", f"Digit ke-5 (angka terakhir): {angka_ke5}")
+
+        angka_ke4 = nomor_terbaru[-2]  # digit ke-4
+        angka_ke5 = nomor_terbaru[-1]  # digit ke-5
+        log_status("🔢", f"Digit ke-4: {angka_ke4}, Digit ke-5: {angka_ke5}")
 
         # Masuk ke menu 5D Angka Tarung
         page1.get_by_role("link", name="5D Angka Tarung").click()
         page1.get_by_text("FULL", exact=True).click()
         time.sleep(2)
 
-        # === ISI R5 ===
         all_digits = ['1','2','3','4','5','6','7','8','9','0']
-        for i, val in enumerate(all_digits, start=1):
-            page1.locator(f'input[name="r5\\[{i}\\]"]').fill(val)
 
-        # === ISI R4 (lewati angka ke-5 tapi tetap isi semua kolom) ===
-        digits_used = [d for d in all_digits if d != angka_ke5]
-        log_status("✏️", f"Mengisi r4[1..9] dengan melewati angka {angka_ke5}")
-
+        # === ISI R5 (lewati angka ke-4) ===
+        digits_r5 = [d for d in all_digits if d != angka_ke4]
+        log_status("✏️", f"Mengisi r5[1..9] dengan melewati angka {angka_ke4}")
         for i in range(9):
-            val = digits_used[i % len(digits_used)]
+            val = digits_r5[i % len(digits_r5)]
+            page1.locator(f'input[name="r5\\[{i+1}\\]"]').fill(val)
+            print(f"r5[{i+1}] = {val}")
+
+        # === ISI R4 (lewati angka ke-5) ===
+        digits_r4 = [d for d in all_digits if d != angka_ke5]
+        log_status("✏️", f"Mengisi r4[1..9] dengan melewati angka {angka_ke5}")
+        for i in range(9):
+            val = digits_r4[i % len(digits_r4)]
             page1.locator(f'input[name="r4\\[{i+1}\\]"]').fill(val)
             print(f"r4[{i+1}] = {val}")
 
@@ -142,37 +148,30 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
         # Ambil saldo terakhir
         try:
             saldo_text = page1.locator("span.overage-num").inner_text().strip()
-            saldo_value = parse_saldo(saldo_text)
+            saldo_text = saldo_text.replace("Rp", "").replace(",", "").strip()
+            saldo_value = float(saldo_text)
         except:
             saldo_value = 0.0
 
         # Kirim hasil ke Telegram
-        if betting_berhasil:
-            pesan = (
-                f"<b>[SUKSES]</b>\n"
-                f"👤 {userid}\n"
-                f"💰 SALDO Rp. <b>{saldo_value:,.0f}</b>\n"
-                f"Nomor HKDW: {nomor_terbaru}\n"
-                f"Digit ke-5: {angka_ke5}\n"
-                f"⌚ {wib}"
-            )
-            kirim_telegram_log("SUKSES", pesan)
-        else:
-            pesan = (
-                f"<b>[GAGAL]</b>\n"
-                f"👤 {userid}\n"
-                f"💰 SALDO Rp. <b>{saldo_value:,.0f}</b>\n"
-                f"Nomor HKDW: {nomor_terbaru}\n"
-                f"Digit ke-5: {angka_ke5}\n"
-                f"⌚ {wib}"
-            )
-            kirim_telegram_log("GAGAL", pesan)
+        status_text = "SUKSES" if betting_berhasil else "GAGAL"
+        pesan = (
+            f"<b>[{status_text}]</b>\n"
+            f"👤 {userid}\n"
+            f"💰 SALDO Rp. <b>{saldo_value:,.1f}</b>\n"
+            f"Nomor HKDW: {nomor_terbaru}\n"
+            f"Digit ke-4: {angka_ke4}\n"
+            f"Digit ke-5: {angka_ke5}\n"
+            f"⌚ {wib}"
+        )
+        kirim_telegram_log(status_text, pesan)
 
         context.close()
         browser.close()
 
     except Exception as e:
         kirim_telegram_log("ERROR", f"<b>[ERROR]</b>\n{userid}@{situs}\n❌ {e}\n⌚ {wib}")
+
 
 
 # ====== PEMBACA FILE MULTI.TXT ======
