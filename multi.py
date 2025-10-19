@@ -140,8 +140,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
         # Ambil saldo terakhir
         try:
             saldo_text = page1.locator("span.overage-num").inner_text().strip()
-            saldo_text = saldo_text.replace("Rp", "").replace(",", "").strip()
-            saldo_value = float(saldo_text)
+            saldo_value = parse_saldo(saldo_text)
         except:
             saldo_value = 0.0
 
