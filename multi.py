@@ -21,12 +21,19 @@ def log_status(icon, msg):
     print(f"{icon} {msg}")
 
 
-def parse_saldo(saldo_text):
-    saldo_text = saldo_text.replace("Rp", "").replace(",", "").replace(".", "").strip()
-    try:
-        return float(saldo_text)
-    except ValueError:
-        return 0.0
+import re
+
+def parse_saldo(saldo_text: str) -> float:
+    saldo_text = saldo_text.strip().replace("Rp", "").replace(" ", "")
+    saldo_text = saldo_text.replace(".", "").replace(",", ".")
+    # Ambil hanya angka dan titik terakhir
+    match = re.search(r"(\d+(?:\.\d+)?)", saldo_text)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 def kirim_telegram_log(status: str, pesan: str):
