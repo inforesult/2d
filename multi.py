@@ -5,16 +5,21 @@ from dotenv import load_dotenv
 from datetime import datetime
 import requests
 
+# ====== LOAD ENVIRONMENT ======
 load_dotenv()
-pw = os.getenv("PW")  # Password disimpan di .env
+pw = os.getenv("PW")  # password login
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
 
 # ====== FUNGSI UTILITAS ======
 def get_wib():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def log_status(icon, msg):
     print(f"{icon} {msg}")
+
 
 def parse_saldo(saldo_text):
     saldo_text = saldo_text.replace("Rp", "").replace(",", "").replace(".", "").strip()
@@ -23,23 +28,29 @@ def parse_saldo(saldo_text):
     except ValueError:
         return 0.0
 
+
 def kirim_telegram_log(status: str, pesan: str):
+    """Kirim log ke Telegram + print ke konsol."""
     print(pesan)
-    if telegram_token and telegram_chat_id:
-        try:
-            response = requests.post(
-                f"https://api.telegram.org/bot{telegram_token}/sendMessage",
-                data={
-                    "chat_id": telegram_chat_id,
-                    "text": pesan,
-                    "parse_mode": "HTML"
-                }
-            )
-            if response.status_code != 200:
-                print(f"Gagal kirim ke Telegram. Status: {response.status_code}")
-                print(f"Respon Telegram: {response.text}")
-        except Exception as e:
-            print("Error saat mengirim ke Telegram:", e)
+    if not telegram_token or not telegram_chat_id:
+        print("[⚠️] Token Telegram tidak ditemukan, lewati pengiriman.")
+        return
+
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{telegram_token}/sendMessage",
+            data={
+                "chat_id": telegram_chat_id,
+                "text": pesan,
+                "parse_mode": "HTML"
+            },
+            timeout=10
+        )
+        if response.status_code != 200:
+            print(f"[✗] Gagal kirim ke Telegram: {response.status_code}")
+            print(f"Respon Telegram: {response.text}")
+    except Exception as e:
+        print(f"[!] Error kirim ke Telegram: {e}")
 
 
 # ====== FUNGSI UTAMA ======
@@ -128,9 +139,9 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
         except:
             saldo_value = 0.0
 
-        # Kirim hasil ke Telegram / log
+        # Kirim hasil ke Telegram
         if betting_berhasil:
-            pesan_sukses = (
+            pesan = (
                 f"<b>[SUKSES]</b>\n"
                 f"👤 {userid}\n"
                 f"💰 SALDO Rp. <b>{saldo_value:,.0f}</b>\n"
@@ -138,9 +149,9 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
                 f"Digit ke-5: {angka_ke5}\n"
                 f"⌚ {wib}"
             )
-            kirim_telegram_log("SUKSES", pesan_sukses)
+            kirim_telegram_log("SUKSES", pesan)
         else:
-            pesan_gagal = (
+            pesan = (
                 f"<b>[GAGAL]</b>\n"
                 f"👤 {userid}\n"
                 f"💰 SALDO Rp. <b>{saldo_value:,.0f}</b>\n"
@@ -148,7 +159,7 @@ def run(playwright: Playwright, situs: str, userid: str, bet2D: str):
                 f"Digit ke-5: {angka_ke5}\n"
                 f"⌚ {wib}"
             )
-            kirim_telegram_log("GAGAL", pesan_gagal)
+            kirim_telegram_log("GAGAL", pesan)
 
         context.close()
         browser.close()
