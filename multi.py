@@ -23,10 +23,23 @@ def parse_saldo(saldo_text):
     except ValueError:
         return 0.0
 
-def kirim_telegram_log(status, pesan):
-    # contoh: kirim ke bot Telegram (opsional)
-    # requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", data={"chat_id": CHAT_ID, "text": pesan, "parse_mode": "HTML"})
-    print(f"[{status}] {pesan}")
+def kirim_telegram_log(status: str, pesan: str):
+    print(pesan)
+    if telegram_token and telegram_chat_id:
+        try:
+            response = requests.post(
+                f"https://api.telegram.org/bot{telegram_token}/sendMessage",
+                data={
+                    "chat_id": telegram_chat_id,
+                    "text": pesan,
+                    "parse_mode": "HTML"
+                }
+            )
+            if response.status_code != 200:
+                print(f"Gagal kirim ke Telegram. Status: {response.status_code}")
+                print(f"Respon Telegram: {response.text}")
+        except Exception as e:
+            print("Error saat mengirim ke Telegram:", e)
 
 
 # ====== FUNGSI UTAMA ======
